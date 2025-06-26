@@ -1,0 +1,45 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches: [ main ]  # Ou a branch que você usa para produção
+    paths:
+      - 'src/Apis/Finme.Api.WebApp/**'      # Gatilho para mudanças nesta API
+      - 'src/Core/**'                      # Gatilho para mudanças no código compartilhado
+      
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x' # Alterado para .NET 9
+
+      - name: Publish .NET application
+        run: dotnet publish src/Apis/Finme.Api.WebApp/Finme.Api.WebApp.csproj -c Release -o site
+
+      - name: Generate deployment package
+        run: cd site && zip -r ../deploy.zip . && cd ..
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: finme-app-backend-9 # Nome da aplicação no Elastic Beanstalk
+          environment_name: Finme-app-backend-9-env # Nome do ambiente no Elastic Beanstalk
+          version_label: ${{ github.sha }} # Usa o SHA do commit como versão
+          region: ${{ secrets.AWS_REGION }}
+          deployment_package: deploy.zip

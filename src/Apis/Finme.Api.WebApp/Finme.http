@@ -1,0 +1,6 @@
+@Finme_HostAddress = http://localhost:5174
+
+GET {{Finme_HostAddress}}/ping/
+Accept: application/json
+
+###
